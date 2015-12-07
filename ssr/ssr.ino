@@ -89,9 +89,9 @@ struct s_relay_wiring
 
 struct s_relay_wiring relay_wiring[] = 
 {
-  { 15, NORMAL   }, { 16, NORMAL   },
+  { 15, NORMAL   }, { 16, INVERTED },
   { 13, INVERTED }, { 12, NORMAL   },
-  { 12, NORMAL   }, { 13, INVERTED },
+  {  4, NORMAL   }, {  5, INVERTED },
 };
 
 String message = "";
@@ -117,16 +117,33 @@ void output_state()
 void create_message()
 {
   int n = 0;
-  message = "<a href=\"login\">login</a><p/>"
+  message =
+"<style type=\"text/css\">"
+"input[type=checkbox]"
+"{"
+ "/* Double-sized Checkboxes */"
+ "-ms-transform: scale(2); /* IE */"
+ "-moz-transform: scale(2); /* FF */"
+ "-webkit-transform: scale(2); /* Safari and Chrome */"
+ "-o-transform: scale(2); /* Opera */"
+ "padding: 10px;"
+"}"
+"</style>"
+            "<a href=\"/\">refresh</a> "
+            "<a href=\"login\">login</a><p/>"
             "<form action=\"/update\" method=\"get\" autocomplete=\"off\">"
-            "<table>";
-  String input_name = "";
+            "<table>"
+            // on top is row with temperature and humidity tabulated
+            "<tr>"
+            "<td>" + String((int)temp_c)+"&deg;C" + "</td>"
+            "<td>" + String((int)humidity)+"%RH" + "</td>"
+            "</tr>";
   for(int y = 0; y < ssr_rows; y++)
   {
     message += "<tr>";
     for(int x = 0; x < ssr_cols; x++)
     {
-      input_name = "name=\"check" + String(n) + "\"";
+      String input_name = "name=\"check" + String(n) + "\"";
       message += String("<td bgcolor=\"") + String(relay_state[n] ? "#00FF00" : "#FF0000") + "\">"
                + String("<input type=\"checkbox\" ") + input_name + String(relay_state[n] ? " checked" : "") + "> </input>"
                + "<button type=\"submit\" name=\"button"
@@ -141,9 +158,15 @@ void create_message()
     }
     message += "</tr>";
   }
-  message += "</table>"
+  message += "<tr>"
+             "<td>"
              "<button type=\"submit\" name=\"apply\" value=\"1\">Apply</button>"
+             "</td>"
+             "<td>"
              "<button type=\"submit\" name=\"save\" value=\"1\">Save</button>"
+             "</td>"
+             "</tr>"
+             "</table>"
              "</form>";
 }
 
