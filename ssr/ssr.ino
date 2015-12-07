@@ -23,13 +23,17 @@
  * 
  * [ ] clean up the mess with global and local ssid/psk
  * 
- * [ ] continuously read DHT sensor, humidity and temperature
- *     emergency shutdown in case of excess heat or humidity
- *     (ticker interrupt)
+ * [x] continuously read DHT sensor, humidity and temperature
+ * [ ] emergency shutdown in case of excess heat or humidity
  *
- * [ ] tabulated temperature display and apply/save buttons
+ * [x] tabulated temperature display and apply/save buttons
+ *
+ * [ ] setup hostname
+ * [ ] one click for all on/off
  */
 
+// remote updates over the air
+// (>1M flash required)
 #define USE_OTA 0
 
 // includes
@@ -110,6 +114,8 @@ String webString="";     // String to display (runtime modified)
 // This is for the ESP8266 processor on ESP-01 
 DHT dht(DHTPIN, DHTTYPE, 11); // 11 works fine for ESP8266
 
+int emergency = 0; // in case of emergency shutdown everything
+
 /// Uncomment the next line for verbose output over UART.
 #define SERIAL_VERBOSE
 
@@ -117,15 +123,13 @@ DHT dht(DHTPIN, DHTTYPE, 11); // 11 works fine for ESP8266
 void output_state()
 {
   for(int i = 0; i < SSR_N; i++)
-  {
-    pinMode(relay_wiring[i].pin, OUTPUT);
-    digitalWrite(relay_wiring[i].pin, relay_state[i] ^ relay_wiring[i].logic);
-  }
+    digitalWrite(relay_wiring[i].pin, (relay_state[i] & ~emergency) ^ relay_wiring[i].logic);
 }
 
 void read_sensor()
 {
   static unsigned long previousMillis = 0;        // will store last temp was read
+  static int old_emergency = -1;
   const long interval = 2000;              // interval at which to read sensor
   // Wait at least 2 seconds seconds between measurements.
   // if the difference between the current time and last time you read
@@ -146,6 +150,12 @@ void read_sensor()
     {
       Serial.println("Failed to read from DHT sensor!");
       return;
+    }
+    emergency = temp_c > 60 || humidity > 85 ? 1 : 0;
+    if(emergency != old_emergency)
+    {
+      old_emergency = emergency;
+      output_state();
     }
   }
 }
@@ -176,7 +186,7 @@ void create_message()
 "<meta http-equiv=\"pragma\" content=\"no-cache\" />"
 "</head>"
             "<a href=\"/\">refresh</a> "
-            "<a href=\"login\">login</a><p/>"
+            "<a href=\"setup\">setup</a><p/>"
             "<form action=\"/update\" method=\"get\" autocomplete=\"off\">"
             "<table>"
             // on top is row with temperature and humidity tabulated
@@ -395,7 +405,7 @@ void setup()
     Serial.println("Failed to mount file system");
     return;
   }
-  
+
   // Load wifi connection information.
   if (! loadConfig(&station_ssid, &station_psk))
   {
@@ -414,6 +424,9 @@ void setup()
       Serial.println("Second time failed. Cannot create filesystem.");
     }
   }
+
+  for(int i = 0; i < SSR_N; i++)
+    pinMode(relay_wiring[i].pin, OUTPUT);
 
   // Check WiFi connection
   // ... check mode
@@ -489,7 +502,7 @@ void setup()
 
   server.on("/", handle_root);
   server.on("/read", handle_read);
-  server.on("/login", handle_login);
+  server.on("/setup", handle_setup);
   server.on("/update", handle_update);
   create_message();
   server.begin();
@@ -510,9 +523,9 @@ void handle_read() {
   server.send(200, "text/html", webString);            // send to someones browser when asked
 }
 
-void handle_login() {
+void handle_setup() {
   String new_ssid = "", new_psk = "";
-  webString = "<form action=\"/login\" method=\"get\" autocomplete=\"off\">"
+  webString = "<form action=\"/setup\" method=\"get\" autocomplete=\"off\">"
               "Access point: <input type=\"text\" name=\"ssid\"><br>"
               "Password: <input type=\"text\" name=\"psk\"><br>"
               "<button type=\"submit\" name=\"apply\" value=\"1\">Apply</button>"
