@@ -17,12 +17,16 @@
  * - modified for SSR support
  */
 
+#define USE_OTA 0
+
 // includes
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <FS.h>
+#if USE_OTA
 #include <ArduinoOTA.h>
+#endif
 #include <ESP8266WebServer.h>
 #include <DHT.h>
 
@@ -92,24 +96,24 @@ void create_message()
     for(int x = 0; x < ssr_cols; x++)
     {
       input_name = "name=\"check" + String(n) + "\"";
-      message += String("<td bgcolor=\"") + String(relay_state[n] ? "#00FF00" : "#FF0000") + "\">";
-      message += String("<input type=\"checkbox\" ") + input_name + String(relay_state[n] ? " checked" : "") + "> </input>";
-      message += "<button type=\"submit\" name=\"button" 
+      message += String("<td bgcolor=\"") + String(relay_state[n] ? "#00FF00" : "#FF0000") + "\">"
+               + String("<input type=\"checkbox\" ") + input_name + String(relay_state[n] ? " checked" : "") + "> </input>"
+               + "<button type=\"submit\" name=\"button"
                + String(n) 
                + "\" value=\"" 
                + String(relay_state[n] ? "0" : "1") 
                + "\">" // toggle when clicked 
                + String(relay_state[n] ? "ON" : "OFF") // current state
-               + "</button>";
-      message += "</td>";
+               + "</button>"
+                 "</td>";
       n++; // increment ssr number
     }
     message += "</tr>";
   }
-  message += "</table>";
-  message += "<button type=\"submit\" name=\"apply\" value=\"1\">Apply</button>";
-  message += "<button type=\"submit\" name=\"save\" value=\"1\">Save</button>";
-  message += "</form>";
+  message += "</table>"
+             "<button type=\"submit\" name=\"apply\" value=\"1\">Apply</button>"
+             "<button type=\"submit\" name=\"save\" value=\"1\">Save</button>"
+             "</form>";
 }
 
 /**
@@ -376,9 +380,11 @@ void setup()
   current_ssid = station_ssid;
   current_psk = station_psk;
 
+#if USE_OTA
   // Start OTA server.
   ArduinoOTA.setHostname((const char *)hostname.c_str());
   ArduinoOTA.begin();
+#endif
 
   server.on("/", handle_root);
   server.on("/read", handle_read);
@@ -503,8 +509,10 @@ void handle_update() {
  */
 void loop()
 {
+  #if USE_OTA
   // Handle OTA server.
   ArduinoOTA.handle();
+  #endif
   // Handle web server
   server.handleClient();
   yield();
