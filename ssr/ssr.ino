@@ -89,9 +89,9 @@ struct s_relay_wiring
 
 struct s_relay_wiring relay_wiring[] = 
 {
-  { 12, NORMAL   }, { 13, NORMAL   },
-  { 14, INVERTED }, { 15, NORMAL   },
-  {  2, NORMAL   }, {  6, INVERTED },
+  { 15, NORMAL   }, { 16, NORMAL   },
+  { 13, INVERTED }, { 12, NORMAL   },
+  { 12, NORMAL   }, { 13, INVERTED },
 };
 
 String message = "";
@@ -234,6 +234,7 @@ bool loadConfig(String *ssid, String *pass)
     relay_state[i] = (ssr_state.substring(i,i+1) == "1" ? 1 : 0);
     //Serial.println(relay_state[i], DEC);
   }
+  output_state();
   ssid->trim();
   pass->trim();
 
@@ -522,6 +523,7 @@ void handle_update() {
         relay_state[n] = server.arg(i).toInt();
     }
   };
+  output_state();
   create_message();
   webString = message;
   #if 0
