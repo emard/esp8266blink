@@ -80,7 +80,7 @@ uint8_t relay_state[] =
 // this value will be XORed with relay state to create 
 // hardware output value
 #define NORMAL 0
-#define INVERTED 1
+#define INVERT 1
 
 struct s_relay_wiring
 {
@@ -89,10 +89,12 @@ struct s_relay_wiring
 
 struct s_relay_wiring relay_wiring[] = 
 {
-  { 15, NORMAL   }, { 16, INVERTED },
-  { 13, INVERTED }, { 12, NORMAL   },
-  {  4, NORMAL   }, {  5, INVERTED },
+  { 16, INVERT }, {  2, INVERT },
+//{  0, INVERT }, {  2, INVERT },
+  { 15, NORMAL }, { 13, INVERT },
+  { 12, INVERT }, { 14, INVERT },
 };
+// onboard led is PIN 16 INVERT
 
 String message = "";
 ESP8266WebServer server(80);
