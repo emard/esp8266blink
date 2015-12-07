@@ -44,7 +44,7 @@
 #include <DHT.h>
 
 #define DHTTYPE DHT22
-#define DHTPIN  16
+#define DHTPIN  12
 
 /**
  * @brief mDNS and OTA Constants
@@ -89,10 +89,10 @@ struct s_relay_wiring
 
 struct s_relay_wiring relay_wiring[] = 
 {
-//{ 16, INVERT }, {  2, INVERT },
-  {  0, INVERT }, {  2, INVERT },
+  { 16, INVERT }, {  2, INVERT },
+//  {  0, INVERT }, {  2, INVERT },
   { 15, NORMAL }, { 13, INVERT },
-  { 12, INVERT }, { 14, INVERT },
+  {  5, INVERT }, { 14, INVERT },
 };
 // onboard led is PIN 16 INVERT
 
@@ -100,14 +100,14 @@ String message = "";
 ESP8266WebServer server(80);
 String webString="";     // String to display (runtime modified)
 
-// Initialize DHT sensor
+// Initialize DHT sensor 
 // NOTE: For working with a faster than ATmega328p 16 MHz Arduino chip, like an ESP8266,
 // you need to increase the threshold for cycle counts considered a 1 or 0.
 // You can do this by passing a 3rd parameter for this threshold.  It's a bit
 // of fiddling to find the right value, but in general the faster the CPU the
 // higher the value.  The default for a 16mhz AVR is a value of 6.  For an
 // Arduino Due that runs at 84mhz a value of 30 works.
-// This is for the ESP8266 processor on ESP-01
+// This is for the ESP8266 processor on ESP-01 
 DHT dht(DHTPIN, DHTTYPE, 11); // 11 works fine for ESP8266
 
 /// Uncomment the next line for verbose output over UART.
@@ -134,9 +134,9 @@ void read_sensor()
   unsigned long currentMillis = millis();
   if(currentMillis - previousMillis >= interval)
   {
-    // save the last time you read the sensor
-    previousMillis = currentMillis;
-
+    // save the last time you read the sensor 
+    previousMillis = currentMillis;   
+     
     // Reading temperature for humidity takes about 250 milliseconds!
     // Sensor readings may also be up to 2 seconds 'old' (it's a very slow sensor)
     humidity = dht.readHumidity();          // Read humidity (percent)
@@ -168,6 +168,13 @@ void create_message()
  "padding: 10px;"
 "}"
 "</style>"
+"<head>"
+"<meta http-equiv=\"cache-control\" content=\"max-age=0\" />"
+"<meta http-equiv=\"cache-control\" content=\"no-cache\" />"
+"<meta http-equiv=\"expires\" content=\"0\" />"
+"<meta http-equiv=\"expires\" content=\"Tue, 01 Jan 1980 1:00:00 GMT\" />"
+"<meta http-equiv=\"pragma\" content=\"no-cache\" />"
+"</head>"
             "<a href=\"/\">refresh</a> "
             "<a href=\"login\">login</a><p/>"
             "<form action=\"/update\" method=\"get\" autocomplete=\"off\">"
@@ -491,6 +498,7 @@ void setup()
 
 // when user requests root web page
 void handle_root() {
+  create_message();
   server.send(200, "text/html", message);
 }
 
