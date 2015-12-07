@@ -33,7 +33,7 @@
  * @brief mDNS and OTA Constants
  * @{
  */
-#define HOSTNAME "ESP8266-OTA-" ///< Hostename. The setup function adds the Chip ID at the end.
+#define HOSTNAME "kabel-" ///< Hostename. The setup function adds the Chip ID at the end.
 /// @}
 
 /**
@@ -413,7 +413,11 @@ void handle_login() {
   for(int i = 0; i < server.args(); i++)
   {
     if(server.argName(i) == "cancel")
+    {
+      loadConfig(&current_ssid, &current_psk);
+      create_message();
       webString = message;
+    }
     if(server.argName(i) == "apply")
     {
       for(int j = 0; j < server.args(); j++)
@@ -435,6 +439,7 @@ void handle_login() {
         //saveConfig(&current_ssid, &current_psk);
         //reboot = 1;
         //loadConfig(&current_ssid, &current_psk);
+        create_message();
         webString = message 
           + String("Click Save for new login:<p/>")
           + "Access point: " + current_ssid + "<br/>"
@@ -504,4 +509,3 @@ void loop()
   server.handleClient();
   yield();
 }
-
