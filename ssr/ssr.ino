@@ -15,6 +15,19 @@
  * 
  * 2015-12-08: 
  * - modified for SSR support
+ *
+ * todo:
+ * [ ] immediately apply temporary changes of AP
+ *     to test it before save. If it fails to connect,
+ *     power off will load previously saved state
+ * 
+ * [ ] clean up the mess with global and local ssid/psk
+ * 
+ * [ ] continuously read DHT sensor, humidity and temperature
+ *     emergency shutdown in case of excess heat or humidity
+ *     (ticker interrupt)
+ *
+ * [ ] tabulated temperature display and apply/save buttons
  */
 
 #define USE_OTA 0
@@ -56,8 +69,6 @@ float humidity = 50.0, temp_c = 20.0;  // readings from sensor
 
 int ssr_cols = 2, ssr_rows = 3; // ssr display shown as table 2x3
 #define SSR_N 6
-#define NORMAL 1
-#define INVERTED 0
 
 uint8_t relay_state[] = 
 {
@@ -66,11 +77,21 @@ uint8_t relay_state[] =
   0, 0,
 };
 
-uint8_t relay_logic[] = 
+// this value will be XORed with relay state to create 
+// hardware output value
+#define NORMAL 0
+#define INVERTED 1
+
+struct s_relay_wiring
 {
-  NORMAL,   NORMAL,
-  INVERTED, NORMAL,
-  NORMAL,   INVERTED,
+  uint8_t pin, logic;  
+};
+
+struct s_relay_wiring relay_wiring[] = 
+{
+  { 12, NORMAL   }, { 13, NORMAL   },
+  { 14, INVERTED }, { 15, NORMAL   },
+  {  2, NORMAL   }, {  6, INVERTED },
 };
 
 String message = "";
@@ -79,6 +100,16 @@ String webString="";     // String to display (runtime modified)
 
 /// Uncomment the next line for verbose output over UART.
 #define SERIAL_VERBOSE
+
+// output relay state to hardware pins
+void output_state()
+{
+  for(int i = 0; i < SSR_N; i++)
+  {
+    pinMode(relay_wiring[i].pin, OUTPUT);
+    digitalWrite(relay_wiring[i].pin, relay_state[i] ^ relay_wiring[i].logic);
+  }
+}
 
 // greate html table
 // that displays ssr state
