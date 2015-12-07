@@ -93,10 +93,9 @@ struct s_relay_wiring
 
 struct s_relay_wiring relay_wiring[] = 
 {
-  { 16, INVERT }, {  2, INVERT },
-//  {  0, INVERT }, {  2, INVERT },
+  {  0, INVERT }, {  2, INVERT },
   { 15, NORMAL }, { 13, INVERT },
-  {  5, INVERT }, { 14, INVERT },
+  { 16, INVERT }, { 14, INVERT },
 };
 // onboard led is PIN 16 INVERT
 
