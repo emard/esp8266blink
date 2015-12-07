@@ -44,7 +44,7 @@
 #include <DHT.h>
 
 #define DHTTYPE DHT22
-#define DHTPIN  13
+#define DHTPIN  16
 
 /**
  * @brief mDNS and OTA Constants
@@ -89,8 +89,8 @@ struct s_relay_wiring
 
 struct s_relay_wiring relay_wiring[] = 
 {
-  { 16, INVERT }, {  2, INVERT },
-//{  0, INVERT }, {  2, INVERT },
+//{ 16, INVERT }, {  2, INVERT },
+  {  0, INVERT }, {  2, INVERT },
   { 15, NORMAL }, { 13, INVERT },
   { 12, INVERT }, { 14, INVERT },
 };
@@ -99,6 +99,16 @@ struct s_relay_wiring relay_wiring[] =
 String message = "";
 ESP8266WebServer server(80);
 String webString="";     // String to display (runtime modified)
+
+// Initialize DHT sensor
+// NOTE: For working with a faster than ATmega328p 16 MHz Arduino chip, like an ESP8266,
+// you need to increase the threshold for cycle counts considered a 1 or 0.
+// You can do this by passing a 3rd parameter for this threshold.  It's a bit
+// of fiddling to find the right value, but in general the faster the CPU the
+// higher the value.  The default for a 16mhz AVR is a value of 6.  For an
+// Arduino Due that runs at 84mhz a value of 30 works.
+// This is for the ESP8266 processor on ESP-01
+DHT dht(DHTPIN, DHTTYPE, 11); // 11 works fine for ESP8266
 
 /// Uncomment the next line for verbose output over UART.
 #define SERIAL_VERBOSE
@@ -110,6 +120,33 @@ void output_state()
   {
     pinMode(relay_wiring[i].pin, OUTPUT);
     digitalWrite(relay_wiring[i].pin, relay_state[i] ^ relay_wiring[i].logic);
+  }
+}
+
+void read_sensor()
+{
+  static unsigned long previousMillis = 0;        // will store last temp was read
+  const long interval = 2000;              // interval at which to read sensor
+  // Wait at least 2 seconds seconds between measurements.
+  // if the difference between the current time and last time you read
+  // the sensor is bigger than the interval you set, read the sensor
+  // Works better than delay for things happening elsewhere also
+  unsigned long currentMillis = millis();
+  if(currentMillis - previousMillis >= interval)
+  {
+    // save the last time you read the sensor
+    previousMillis = currentMillis;
+
+    // Reading temperature for humidity takes about 250 milliseconds!
+    // Sensor readings may also be up to 2 seconds 'old' (it's a very slow sensor)
+    humidity = dht.readHumidity();          // Read humidity (percent)
+    temp_c = dht.readTemperature(false);     // Read temperature as Fahrenheit
+    // Check if any reads failed and exit early (to try again).
+    if (isnan(humidity) || isnan(temp_c))
+    {
+      Serial.println("Failed to read from DHT sensor!");
+      return;
+    }
   }
 }
 
@@ -471,11 +508,11 @@ void handle_login() {
               "Access point: <input type=\"text\" name=\"ssid\"><br>"
               "Password: <input type=\"text\" name=\"psk\"><br>"
               "<button type=\"submit\" name=\"apply\" value=\"1\">Apply</button>"
-              "<button type=\"submit\" name=\"cancel\" value=\"1\">Cancel</button>"
+              "<button type=\"submit\" name=\"discard\" value=\"1\">Discard</button>"
               "</form>";
   for(int i = 0; i < server.args(); i++)
   {
-    if(server.argName(i) == "cancel")
+    if(server.argName(i) == "discard")
     {
       loadConfig(&current_ssid, &current_psk);
       create_message();
@@ -573,5 +610,6 @@ void loop()
   #endif
   // Handle web server
   server.handleClient();
+  read_sensor();
   yield();
 }
