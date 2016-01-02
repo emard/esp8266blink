@@ -24,7 +24,7 @@
  * [ ] clean up the mess with global and local ssid/psk
  * 
  * [x] continuously read DHT sensor, humidity and temperature
- * [ ] emergency shutdown in case of excess heat or humidity
+ * [x] emergency shutdown in case of excess heat or humidity
  *
  * [x] tabulated temperature display and apply/save buttons
  *
@@ -34,7 +34,7 @@
 
 // remote updates over the air
 // (>1M flash required)
-#define USE_OTA 0
+#define USE_OTA 1
 
 // includes
 #include <ESP8266WiFi.h>
@@ -48,7 +48,7 @@
 #include <DHT.h>
 
 #define DHTTYPE DHT22
-#define DHTPIN  12
+#define DHTPIN  4
 
 /**
  * @brief mDNS and OTA Constants
@@ -63,7 +63,7 @@
  */
 const char* ap_default_ssid = "kabel"; ///< Default SSID.
 const char* ap_default_psk = "produzni"; ///< Default PSK.
-/// @}
+//const char* ap_default_psk = ""; ///< Default PSK.
 const char* config_name = "./ssr.conf";
 
 String current_ssid = ap_default_ssid;
@@ -76,9 +76,9 @@ int ssr_cols = 2, ssr_rows = 3; // ssr display shown as table 2x3
 
 uint8_t relay_state[] = 
 {
-  0, 0,
-  0, 0,
-  0, 0,
+  1, 1,
+  1, 1,
+  1, 1,
 };
 
 // this value will be XORed with relay state to create 
@@ -93,9 +93,9 @@ struct s_relay_wiring
 
 struct s_relay_wiring relay_wiring[] = 
 {
-  {  0, INVERT }, {  2, INVERT },
-  { 15, NORMAL }, { 13, INVERT },
-  { 16, INVERT }, { 14, INVERT },
+  {  2, INVERT }, {  5, INVERT },
+  { 16, INVERT }, { 13, INVERT },
+  { 14, INVERT }, { 12, INVERT },
 };
 // onboard led is PIN 16 INVERT
 
@@ -103,6 +103,7 @@ String message = "";
 ESP8266WebServer server(80);
 String webString="";     // String to display (runtime modified)
 
+#ifdef DHTPIN
 // Initialize DHT sensor 
 // NOTE: For working with a faster than ATmega328p 16 MHz Arduino chip, like an ESP8266,
 // you need to increase the threshold for cycle counts considered a 1 or 0.
@@ -112,6 +113,7 @@ String webString="";     // String to display (runtime modified)
 // Arduino Due that runs at 84mhz a value of 30 works.
 // This is for the ESP8266 processor on ESP-01 
 DHT dht(DHTPIN, DHTTYPE, 11); // 11 works fine for ESP8266
+#endif
 
 int emergency = 0; // in case of emergency shutdown everything
 
@@ -127,6 +129,7 @@ void output_state()
 
 void read_sensor()
 {
+  #ifdef DHTPIN
   static unsigned long previousMillis = 0;        // will store last temp was read
   static int old_emergency = -1;
   const long interval = 2000;              // interval at which to read sensor
@@ -157,6 +160,7 @@ void read_sensor()
       output_state();
     }
   }
+  #endif
 }
 
 // greate html table
@@ -243,7 +247,6 @@ bool loadConfig(String *ssid, String *pass)
   {
     Serial.print("Failed to load ");
     Serial.println(config_name);
-
     return false;
   }
 
@@ -262,9 +265,7 @@ bool loadConfig(String *ssid, String *pass)
     le = 1;
     pos = content.indexOf("\n");
     if (pos == -1)
-    {
       pos = content.indexOf("\r");
-    }
   }
 
   // If there is no second line: Some information is missing.
@@ -272,7 +273,6 @@ bool loadConfig(String *ssid, String *pass)
   {
     Serial.println("Infvalid content.");
     Serial.println(content);
-
     return false;
   }
 
@@ -286,17 +286,14 @@ bool loadConfig(String *ssid, String *pass)
     le2 = 1;
     pos2 = content.indexOf("\n", pos + le + 1);
     if (pos2 == -1)
-    {
       pos2 = content.indexOf("\r", pos + le + 1);
-    }
   }
   
   // If there is no third line: Some information is missing.
   if (pos2 == -1)
   {
-    Serial.println("Infvalid content.");
+    Serial.println("Invalid content.");
     Serial.println(content);
-
     return false;
   }
 
@@ -307,11 +304,7 @@ bool loadConfig(String *ssid, String *pass)
   // get relay state
   String ssr_state = content.substring(pos2 + le2);
   for(int i = 0; i < ssr_state.length() && i < SSR_N; i++)
-  {
-    //Serial.print(ssr_state.substring(i, i+1));
     relay_state[i] = (ssr_state.substring(i,i+1) == "1" ? 1 : 0);
-    //Serial.println(relay_state[i], DEC);
-  }
   output_state();
   ssid->trim();
   pass->trim();
@@ -343,7 +336,6 @@ bool saveConfig(String *ssid, String *pass)
   {
     Serial.print("Failed to save ");
     Serial.println(config_name);
-
     return false;
   }
 
@@ -633,3 +625,4 @@ void loop()
   read_sensor();
   yield();
 }
+
